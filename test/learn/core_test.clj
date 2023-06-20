@@ -1,6 +1,6 @@
 (ns learn.core-test
   (:require [clojure.test :refer [deftest testing is]]
-            [learn.core :refer [foo cube sum-cube sum-cubes integral pi-sum sum-integers]]))
+            [learn.core :refer [foo cube make-add-closure sum-cube sum-cubes integral pi-sum sum-integers sum-integers-a]]))
 
 (deftest foo-test
   "test foo hello world!"
@@ -22,9 +22,13 @@
   "test math abs"
   (testing (is
             (= 3 (Math/abs (int -3))))))
+
 ;; 测试 a 到 b 之间的和
 (deftest test-sum-integer
   (println (sum-integers 1 5)))
+
+(deftest test-sum-integers-a
+  (println (sum-integers-a 1 5)))
 
 ;; 测试 a 到 b 之间的立方和
 (deftest test-sum-cube
@@ -41,3 +45,8 @@
 ;; 定积分的近似值
 (deftest test-integral
   (println (integral cube 0 1 0.01)))
+
+;; clojure closure 示例
+(deftest test-clojure-closure
+  (let [add-ten (make-add-closure 10)]
+    (println (add-ten 2))))

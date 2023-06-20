@@ -43,10 +43,12 @@
     (+ (term a)
        (sum term (next a) next b))))
 
+;; 自增函数
 (defn increment
   [n]
   (+ n 1))
 
+;; 计算 a 到 b 的立方和
 (defn sum-cubes
   [a b]
   (sum cube a increment b))
@@ -55,19 +57,25 @@
 (defn identity-x [x] x)
 
 ;;抽象版本
-(defn sum-intergers-a
+(defn sum-integers-a
   [a b]
   (sum identity-x a increment b))
 
 ;;计算模拟圆周率
 (defn pi-sum
   [a b]
-  (let [pi-term (fn [x] (/ 1.0 (* x (+ x 2))))]
-    (let [pi-next (fn [x] (+ x 4))]
-      (sum pi-term a pi-next b))))
+  (let [pi-term (fn [x] (/ 1.0 (* x (+ x 2))))
+        pi-next (fn [y] (+ y 4))]
+    (sum pi-term a pi-next b)))
 
 ;; 函数 f 在范围 a 和 b 之间的定积分的近似值
 (defn integral
   [f a b dx]
   (let [add-dx (fn [x] (+ x dx))]
     (* (sum f (+ a (/ dx 2.0)) add-dx b) dx)))
+
+;; clojure 闭包示例
+;; 闭包通常用于保留函数的状态和记忆效应，而柯里化则用于对函数进行组合和封装。
+(defn make-add-closure [x]
+  (fn [y] (+ x y)))
+
