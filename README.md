@@ -298,7 +298,7 @@ ISeq接口提供三个函数：first、rest 和 cons
 
 Clojure 是一种函数式语言，这意味着函数是该语言的“头等公民”。
 
-对第一类函数，语言应该允许它们
+对第一类函数，语言允许它们
 
 1. 动态创建
 2. 作为参数传递给函数
@@ -323,8 +323,225 @@ Clojure 提供了方便的 defn 宏，可以实现传统形式的函数定义
  (fn [a b] (+ a b)))
 
 ;; 函数可变参数列表
-;; 定义包含两个及以上参数的函数
+;; 定义包含两个及以上参数的函数 [x y & more]
 (defn arity2+ [first second & more]
    (vector first second more))
 
+;; let 形式可以在代码中将一个符号和某个值绑定，从而引入局部命名对象
+;; let 形式接受一个向量作为其第一个参数，该向量包含偶数个形式，然后是在let求值时进行求值的0个或者多个形式。let 返回的是最后一个表达式的值
+(defn let-s []
+  (let [x 1 
+        y 2 
+        z (+ x y)]
+    z))
+
+;; 下划线标识符,下划线标识符可用于任何你不关心某个对象值的情况。
+(defn let-s-ignore []
+  (let [x 1
+        y 2
+        _ (println "total-size:" (+ x y))
+        z (+ x y)]
+    z))
+
+;; do 形式是将多个 s- 表达式组合为一个表达式的方便手段。
+;; 这是宏中常见的做法，许多 Clojure 核心形式都是以多个形式为参数并用隐含的 do 将它们合而为一的宏。
+;; fn、let、doseq、loop、try、when、binding、dosync 和 locking 就是这方面的例子
+(defn do-things [x]
+  (do
+    (println "do-first-things")
+    (println "do-second-things")
+    x))
+
 ```
+
+### 读取器宏
+Clojure 读取器将程序文本转换为 Clojure 数据结构。
+
+这是通过识别圆括号、花括号等组成列表、哈希映射和向量开头（及结尾）的特殊字符完成的; 识别规则内建于读取器中。
+
+其他字符也是特殊的，因为它们通知读取器之后的形式应该以特殊的方式处理。
+从某种意义上讲，这些字符扩展了读取器的能力，它们被称为 **读取器宏**。
+
+读取器宏最简单 (也是最传统) 的例子是注释符号 (;)。
+当读取器遇到一个分号时，它将该行代码的其余部分视为注释并将其忽略。
+
+### 程序流程
+
+条件的最简单例子是 if 形式:
+
+```clojure
+;;  Clojure 中 if 的一般形式如下
+(if (= 1 1) 
+  "yes"
+  "no")
+;;-> yes
+
+;; if-not 宏所做的和 if 特殊形式相反
+(if-not (> 5 2) 
+  "yes"
+  "no")
+;;-> no
+
+;; cond 可以将嵌套的 if 条件树扁平化。一般形式如下
+(defn condition-s [x]
+  (cond
+    (> x 0) "greater!"
+    (= x 0) "zero!"
+    :default "lesser!"))
+
+;; when 宏的一般形式如下：
+(when (> 5 2)
+  (println "five")
+  (println "is")
+  (println "greater")
+  "done")
+
+;; when-not 是 when 的对立面，如果测试条件返回 false 或者 nil
+(when-not (< 5 2)
+  (println "two")
+  (println "is")
+  (println "smaller!")
+  "done")  
+```
+
+### 逻辑函数
+
+clojure 只有 nil 和 false 在逻辑上是假值，剩下的都是真值
+
+and 和 or 也都是宏。
+这意味着，它们不是内建于 Clojure 语言中的，但却是核心库的组成部分。
+这还意味着，你可以编写与 and 或者 or 表现相同的宏，两者从语言上无法区别。
+
+```clojure
+;; and 接受 0 个或者多个形式，按顺序求值每个形式，如果任何一个返回 nil 或者 false，则返回该值。
+;; 如果所有形式都不返回 false 或者 nil，则 and 返回最后一个形式的值
+(and)
+;;-> true
+
+;; or 以相反的方式工作。
+;; 它也接受 0 个或者多个形式并逐一求值。
+;; 如果任何形式返回逻辑真值，则将其作为 or 的值返回。
+;; 如果所有形式都不返回逻辑真值，则 or 返回最后一个值。
+(or)
+;; -> nil
+
+;; not 函数
+(not true)
+;;-> false
+(not false)
+;;-> true
+
+;; = 与 ==
+;; 如果你知道所要对比的所有数据都是数值，且预期有不同类别的数字，则使用 ==，否则使用=
+(== (/ 1 2) 0.5)
+;;-> true
+
+(= (/ 1 2) 0.5)
+;;-> false
+```
+
+### 函数式循环
+
+Clojure 的 while 宏的工作方式与 Ruby 和 Java 等命令式语言类似
+
+```clojure
+;; while 示例
+(defn while-s []
+   (def x (atom 1))
+   (while (< @x 5)
+      (do
+         (println @x)
+         (swap! x inc))))
+```
+
+Clojure 没有传统的 for 循环；
+Clojure 版本的循环流程控制是 loop 和与之关联的 recur。
+
+```clojure
+;; recur 是 Clojure 中的一个特殊形式，虽然看上去像递归，但它不使用栈。
+(defn fact-loop [n]
+  "计算阶乘"
+  (loop [current n fact 1] ;; current 与值 n 绑定，fact 与值 1 绑定
+    (if (== current 1)
+      fact
+      (recur (dec current) (* fact current))))) ;; recur 有两个绑定值（dec current）和（*fact current），它们在计算之后重新与 current 和 fact 绑定
+```
+
+doseq 是一个有趣的形式。
+最简单的形式接受一个包含两个项的向量，第一个项是一个新符号，以后将绑定到第二个项（必须是一个序列）中的每个元素。
+形式的主体将对序列中的每个元素执行，然后整个形式将返回 nil
+
+```clojure
+(doseq [number [1 10 20 30 40]]
+  (println "number is:" number))
+
+;; dotimes 是一个方便的宏，接受一个向量（包含一个符号和一个数值n），然后是宏的主体。向量中的符号被设置为 0 到（n-1）的数值，并对每个数值求取主体的值
+(dotimes [number 10]
+  (println "number is:" number))  
+
+;; map 的最简单用法是接受一个一元函数和一个数据元素序列。
+;; 一元函数是只有一个参数的函数。
+;; map 将这个函数应用到序列的每个元素，并返回一个新序列，该序列包含所有返回值
+(map inc [0 1 2 3 4])
+;;-> 1 2 3 4 5
+
+;; map 接受一个函数，其可以取得任意数量的参数以及相同数量的序列。
+;; 它将该函数应用到每个序列的对应元素，并收集其结果。
+;; 如果序列的长度不等，则map应用到最短的一个
+(map + [0 1 2 3 4] [1 2 3])
+;;-> (1 3 5)
+
+;; filter 函数
+(defn non-zero-expenses [expenses]
+  (let [non-zero? (fn [e] (not (zero? e)))]
+  (filter non-zero? expenses)))
+
+(non-zero-expenses [-10 -9 -8 0 2 3 4 5])
+;;-> [0 2 3 4 5]
+
+;; remove
+(defn remove-expenses [expenses]
+  (remove zero? expenses))
+
+(remove-expenses [-10 -9 -8 0 2 3 4 5])
+;;-> (0 2 3 4 5)
+
+;; reduce 的最简形式是一个高阶函数，它接受一个函数（有两个参数）和一个数据元素序列。
+;; 函数参数应用到序列的前两个元素，产生第一个结果。
+;; 然后，用这个结果和序列的下一个元素再次调用同一个函数。
+;; 对以后的元素重复上述过程，直到处理完最后一个元素。
+(defn factorial [n]
+  (let [numbers (range 1 (+ n 1))]
+    (reduce * numbers)))
+
+(factorial 10)
+;;-> 3628800
+
+(defn factorial-reductions [n]
+  "计算阶乘"
+  (let [numbers (range 1 (+ n 1))]
+    (reductions * numbers)))
+
+
+;; 判断给定的整数 x 是否为素数
+(defn prime? [x]
+  "判断给定的整数 x 是否为素数"
+  (let [divisors (range 2 (inc (int (Math/sqrt x))))  ;; 创建一个整数列表，包含从 2 到 sqrt(x) 的所有除数
+        remainders (map (fn [d] (rem x d)) divisors)] 
+    (not (if (some zero? remainders) true false))))   ;; 如果 remainders 中不存在任何一个为 0 的元素，则说明 x 是素数，否则不是素数
+
+(prime? 5)
+;;-> true
+(prime? 6)
+;;-> false
+
+;; 返回小于给定整数 n 的所有素数
+(defn primes-less-than [n]
+  "返回小于给定整数 n 的所有素数"
+  (for [x (range 2 (inc n)) ;; 对从 2 到 n（包含 n）的所有整数进行迭代，选择其中的素数并返回结果
+        :when (prime? x)]
+    x))
+
+(primes-less-than 10)
+```
+
