@@ -242,13 +242,13 @@ Clojure 还增加了另一种不太常见的数值类型：比例(ratio)。
  映射字面量和 hash-map 函数不完全等价，因为 Clojure 实际上有两种不同的映射实现：哈希映射（hash-map）和数组映射（array-map）。
 
  数组映射以有序方式保存键和值，以扫描方式执行查找，而不采用哈希方式。
- 
+
  这对于小的映射更快，所以较小的映射字面量（10个键或者更少）实际上将成为一个数组映射而不是哈希映射。
- 
+
  如果用 assoc 函数将太多键关联到一个数组映射，那么最终将会得到一个哈希映射（但是，反过来却不成立：哈希映射变得太小时不会返回一个数组映射）。
- 
+
  透明地替换数据结构的实现是 Clojure 提高性能的常用技巧，这是通过使用不可变数据结构和纯函数实现的。
- 
+
  不管调用 hash-map 和 array-map 函数时使用多少个参数，它们总是返回对应的结构
 
 ## 序列
@@ -287,6 +287,7 @@ ISeq接口提供三个函数：first、rest 和 cons
 (cons {:a 1} {:b 2 :c 3})
 ;;-> ({:a 1} [:b 2] [:c 3])
 ```
+
 序列抽象通常是 **惰性** 的，也就是说，尽管 first、rest 和 cons 的结果打印出来像一个列表（两边有圆括号），但并没有进行创建列表的额外工作。
 
 ```clojure
@@ -304,7 +305,6 @@ Clojure 是一种函数式语言，这意味着函数是该语言的“头等公
 2. 作为参数传递给函数
 3. 从其他函数中返回
 4. 作为值保存在其他数据结构中
-
 
 ### 函数定义
 
@@ -355,7 +355,8 @@ Clojure 提供了方便的 defn 宏，可以实现传统形式的函数定义
 ```
 
 ### 读取器宏
-Clojure 读取器将程序文本转换为 Clojure 数据结构。
+
+Clojure **读取器** 将程序文本转换为 Clojure 数据结构。
 
 这是通过识别圆括号、花括号等组成列表、哈希映射和向量开头（及结尾）的特殊字符完成的; 识别规则内建于读取器中。
 
@@ -545,3 +546,37 @@ doseq 是一个有趣的形式。
 (primes-less-than 10)
 ```
 
+### 串行宏
+
+```clojure
+
+(defn final-amount [principle rate time-periods]
+  (* (Math/pow (+ 1 (/ rate 100)) time-periods) principle))
+
+(final-amount 100 20 1)
+
+(final-amount 100 20 2)
+
+;; thread-first 宏所做的是取得第一个参数，将其放在下一个表达式中的第二个位置上。
+;; 它被称为 thread-first，是因为它将代码移到下一形式首个参数的位置。
+;; 然后，它取得整个结果表达式，并将其移到再下一个表达式的第二个位置，重复上述过程，直到所有表达式都处理完毕。
+;; (* (Math/pow (+ 1 (/ rate 100)) time-periods) principle))
+(defn final-amount2 [principle rate time-periods]
+  (-> rate
+      (/ 100)
+      (+ 1)
+      (Math/pow time-periods)
+      (* principle)))
+
+(final-amount2 100 20 1)
+(final-amount2 100 20 2)
+
+;; thread-last 宏（名称为->>）是 thread-first 宏的近亲。
+;; 它取得第一个表达式后并没有将其移入下一个表达式的第二个位置，而是将其移到最后的位置。然后，对向其提供的所有表达式重复该过程
+;; (reduce * (range 1 (+1 n)))
+(defn factorial2 [n]
+  (->> n
+       (+ 1)
+       (range 1)
+       (reduce *)))
+```
