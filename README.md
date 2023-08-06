@@ -579,4 +579,48 @@ doseq 是一个有趣的形式。
        (+ 1)
        (range 1)
        (reduce *)))
+
+;; thread-as 宏
+;; as->更灵活：它允许提供一个名称，把各个连续形式的结果绑定到那个名称，以便在下一步中使用
+(as-> {"a" [1 2 3 4]} <>
+      (<> "a")
+      (conj <> 10)
+      (map inc <>))       
 ```
+### 元数据
+
+元数据是 "关于数据的数据"。
+Clojure 支持用其他数据标记数据 (例如映射、列表和向量)，而不改变被标记数据的值。
+
+```clojure
+(def untrusted (with-meta {:command "delete-table" :subject "users"}
+                          {:safe false :io true}))
+
+(meta untrusted)
+;;=> {:safe false, :io true}
+
+(def untrusted ^{:safe false :io true} 
+                {:command "delete-table" :subject "users"})
+```
+### clojure 多重方法多态
+
+多态（polymorphism）是将多种类型当成相同类型使用的一种能力，可以编写相同代码来操作许多不同类型。
+有多种方法能够实现多态，其中三种是许多语言共有的：参数化、随意和子类多态。
+
+```clojure
+(defn ad-hoc-type-number [thing]
+             (condp = (type thing)
+               java.lang.String "stirng"
+               clojure.lang.PersistentVector "vector"))
+
+(ad-hoc-type-number "hello clojure")
+;;-> string
+(ad-hoc-type-number [])
+;;-> vector
+```
+
+子类多态
+
+子类多态是面向对象语言中占据统治地位的多态类型，在这些语言里它表现为类或者接口层次结构。
+Clojure 可以通过其 Java 互操作性使用 Java 类和接口，Clojure 的内建类型也参与 Java 接口和类层次结构。
+
